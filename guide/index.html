@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>How Undertow was built — design &amp; engineering guide</title>
+<meta name="description" content="How the Undertow Film Festival site was designed and built: brutalist poster typography, a GSAP letterpress hero, CSS marquee tickers, canvas film grain, and accessible day-tabs — shipped on GitHub Pages." />
+<meta name="theme-color" content="#0a0a0a" />
+<meta name="color-scheme" content="dark" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#0a0a0a;--ink:#f4f4f2;--dim:#a0a0a0;--red:#e63329;
+  --line:rgba(244,244,242,.14);--line-2:rgba(244,244,242,.07);
+  --ease:cubic-bezier(.85,0,.15,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:"Inter",system-ui,sans-serif;
+  line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--red)}
+::selection{background:var(--red);color:var(--bg)}
+.mono{font-family:"DM Mono",monospace}
+header{border-bottom:1px solid var(--line);padding:16px clamp(18px,4vw,48px);
+  display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{font-family:"Anton",Impact,sans-serif;font-size:1.1rem;letter-spacing:.04em;
+  color:var(--ink);text-decoration:none;text-transform:uppercase}
+.back{font-family:"DM Mono",monospace;font-size:.72rem;letter-spacing:.16em;
+  color:var(--dim);text-decoration:none;border:1px solid var(--line);padding:8px 14px;
+  transition:color .18s var(--ease),border-color .18s var(--ease)}
+.back:hover{color:var(--ink);border-color:var(--ink)}
+main{max-width:880px;margin:0 auto;padding:clamp(48px,8vh,90px) clamp(18px,4vw,48px) 80px}
+.kicker{font-family:"DM Mono",monospace;font-size:.7rem;letter-spacing:.24em;color:var(--red);
+  text-transform:uppercase;margin-bottom:1rem}
+h1{font-family:"Anton",Impact,sans-serif;text-transform:uppercase;font-weight:400;
+  font-size:clamp(2.6rem,7.5vw,5rem);line-height:.9;margin-bottom:1.4rem}
+h1 em{font-style:normal;color:var(--red)}
+h2{font-family:"Anton",Impact,sans-serif;text-transform:uppercase;font-weight:400;
+  font-size:clamp(1.6rem,3.4vw,2.4rem);line-height:1;margin:0 0 1.1rem}
+.lede{color:var(--dim);font-size:1.08rem;max-width:60ch}
+section{margin-top:clamp(52px,8vh,84px);border-top:1px solid var(--line);padding-top:2.2rem;
+  position:relative}
+.sec-n{position:absolute;top:-1px;right:0;font-family:"DM Mono",monospace;font-size:.66rem;
+  letter-spacing:.2em;color:var(--dim);border-top:2px solid var(--red);padding-top:10px}
+p{margin-bottom:1rem;max-width:68ch}
+p,li{color:var(--dim)}
+strong{color:var(--ink);font-weight:600}
+ul{margin:0 0 1rem 1.1rem}
+li{margin-bottom:.5rem}
+pre{background:#111;border:1px solid var(--line);padding:18px;overflow-x:auto;
+  font-size:.8rem;line-height:1.6;margin:1.2rem 0;color:#d9d9d5}
+code{font-family:"DM Mono",monospace}
+p code,li code{background:#161616;border:1px solid var(--line-2);padding:1px 6px;font-size:.85em;color:var(--ink)}
+.tok{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  border-top:1px solid var(--line);border-left:1px solid var(--line);margin:1.2rem 0}
+.tok div{background:var(--bg);padding:12px 14px;font-family:"DM Mono",monospace;font-size:.7rem;
+  letter-spacing:.06em;color:var(--dim);
+  border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.tok b{display:block;font-weight:500;color:var(--ink);margin-bottom:2px}
+.sw{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:baseline;
+  border:1px solid var(--line)}
+footer{border-top:1px solid var(--line);padding:26px clamp(18px,4vw,48px);
+  font-family:"DM Mono",monospace;font-size:.64rem;letter-spacing:.14em;color:var(--dim);
+  display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;text-transform:uppercase}
+footer a{color:var(--dim)}
+footer a:hover{color:var(--red)}
+a:focus-visible,.back:focus-visible{outline:2px solid var(--red);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="../">Undertow<span style="color:var(--red)">.</span></a>
+  <a class="back" href="../">← BACK TO THE FESTIVAL</a>
+</header>
+
+<main>
+  <p class="kicker">Build guide — design showcase</p>
+  <h1>How Undertow<br>was built<em>.</em></h1>
+  <p class="lede">A brutalist festival poster that behaves like a website: Anton at billboard
+    scale, one film red, a letterpress hero, marquee tickers, and a projector that occasionally
+    slips a frame. Zero images. Here is the whole trick, with code.</p>
+
+  <section>
+    <span class="sec-n">01 / 05</span>
+    <h2>The idea</h2>
+    <p>Festival sites usually try to be tasteful. Festival <strong>posters</strong> never do —
+      they’re set in one heavy face, they shout the dates, and they get pasted over each other
+      until the wall itself looks like the identity. Undertow takes the wall, not the brochure:
+      pure black and off-white, hairline rules, huge condensed type, and a single red reserved
+      for the things a poster would stamp — dates, prices, SOLD OUT.</p>
+    <p>The interaction patterns underneath are boringly proven, on purpose. The program rail is
+      the day-tab pattern from cinema ticketing apps (Google Pay Movie Tickets, IMDb showtimes);
+      each film row follows DICE’s event anatomy — time and venue in mono, tags, red only on the
+      transactional bits; the ticket tiers copy Eventbrite’s microcopy discipline
+      (“incl. booking fee”, “sales end”, a dead button that says why). Research the bones,
+      invent the skin.</p>
+  </section>
+
+  <section>
+    <span class="sec-n">02 / 05</span>
+    <h2>The stack</h2>
+    <ul>
+      <li><strong>Vanilla HTML/CSS/JS</strong> — one page, one stylesheet, one script. No build step.</li>
+      <li><strong>GSAP 3.12 + ScrollTrigger</strong> (CDN, deferred) — the letterpress hero and one
+        scroll-scrubbed drift. Everything else is CSS.</li>
+      <li><strong>Google Fonts</strong> — Anton (poster display), Inter (body), DM Mono (times, venues, fine print).</li>
+      <li><strong>Canvas 2D</strong> — film grain, six pre-rendered noise plates cycled at ~11fps.</li>
+      <li><strong>GitHub Pages</strong> — static, relative paths, <code>.nojekyll</code>.</li>
+    </ul>
+    <p>Design tokens live at the top of the stylesheet. The whole identity is seven values:</p>
+    <div class="tok">
+      <div><b><span class="sw" style="background:#0a0a0a"></span>--bg</b>#0a0a0a</div>
+      <div><b><span class="sw" style="background:#f4f4f2"></span>--ink</b>#f4f4f2</div>
+      <div><b><span class="sw" style="background:#a0a0a0"></span>--dim</b>#a0a0a0</div>
+      <div><b><span class="sw" style="background:#5a5a5a"></span>--faint</b>#5a5a5a</div>
+      <div><b><span class="sw" style="background:#e63329"></span>--red</b>#e63329</div>
+      <div><b>--line</b>rgba(244,244,242,.14)</div>
+      <div><b>--ease</b>cubic-bezier(.85,0,.15,1)</div>
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-n">03 / 05</span>
+    <h2>Signature technique</h2>
+    <p><strong>1 · The guillotine ease, in two engines.</strong> Brutalist motion should be
+      abrupt but controlled — a blade, not a spring. The signature curve is
+      <code>cubic-bezier(.85,0,.15,1)</code>. CSS gets it as a custom property; GSAP core can’t
+      parse CSS beziers, so the same curve is solved numerically and handed to GSAP as a plain
+      function. One easing, no drift between the two engines:</p>
+<pre><code>function cubicBezier(x1, y1, x2, y2) {
+  const cx = 3*x1, bx = 3*(x2-x1) - cx, ax = 1 - cx - bx;
+  const cy = 3*y1, by = 3*(y2-y1) - cy, ay = 1 - cy - by;
+  const X = t =&gt; ((ax*t + bx)*t + cx)*t;
+  const Y = t =&gt; ((ay*t + by)*t + cy)*t;
+  const dX = t =&gt; (3*ax*t + 2*bx)*t + cx;
+  return x =&gt; {                       // Newton–Raphson: solve t for x, sample y
+    let t = x;
+    for (let i = 0; i &lt; 6; i++) {
+      const e = X(t) - x; if (Math.abs(e) &lt; 1e-5) break;
+      t -= e / dX(t);
+    }
+    return Y(Math.min(1, Math.max(0, t)));
+  };
+}
+const guillotine = cubicBezier(.85, 0, .15, 1);</code></pre>
+
+    <p><strong>2 · The letterpress hero.</strong> Each headline line sits inside an
+      <code>overflow:hidden</code> sleeve, translated 115% down by a rule gated on the
+      <code>.js</code> class — so without JavaScript nothing is ever hidden. GSAP slides the
+      lines up in sequence like plates dropping into a press, then stamps the red period in at
+      2.4× scale:</p>
+<pre><code>tl.to('.hero-title .h-line:nth-child(1) .h-seg', { y: 0, duration: .72 }, .16)
+  .to('.hero-title .h-line:nth-child(2) .h-seg', { y: 0, duration: .72 }, .28)
+  .fromTo('.h-dot',
+    { scale: 2.4, rotation: -18 },
+    { scale: 1, rotation: 0, duration: .34 }, .78)   // the stamp
+  .to('.hero-bar', { scaleX: 1, duration: .5 }, .52); // the red rule wipes in</code></pre>
+    <p>If GSAP never arrives (CDN down), <code>main.js</code> adds a <code>.loaded</code> class
+      and CSS transitions run the same choreography with the same bezier. Two paths, one look.</p>
+
+    <p><strong>3 · The marquee ticker.</strong> Two counter-scrolling bands — film titles in
+      Anton, festival facts in mono. The content is duplicated once inside a
+      <code>width:max-content</code> row and the keyframe translates exactly −50%, so the loop
+      is seamless at any viewport width. CSS animates; JS only contributes the pause button:</p>
+<pre><code>.tick-row { display:flex; width:max-content; animation:tick 70s linear infinite; }
+.tick-rev { animation-direction:reverse; animation-duration:90s; }
+@keyframes tick { to { transform: translateX(-50%); } }
+.ticker.paused .tick-row { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tick-row { animation: none !important; }  /* static list, still readable */
+}</code></pre>
+
+    <p><strong>4 · The projector.</strong> A fixed canvas cycles six pre-rendered noise plates
+      (rendering noise per-frame is wasted work — cycling plates is indistinguishable at 90ms).
+      Every 6–11 seconds the body gets a <code>.flick</code> class for 120ms: the main column
+      jumps a pixel, the grain flares. It reads as a projector slipping a frame. Under
+      <code>prefers-reduced-motion</code> the canvas is <code>display:none</code> and neither
+      loop ever starts.</p>
+  </section>
+
+  <section>
+    <span class="sec-n">04 / 05</span>
+    <h2>Details that matter</h2>
+    <ul>
+      <li><strong>Day tabs are real tabs.</strong> <code>role="tablist"</code>, arrow-key +
+        Home/End navigation, <code>aria-selected</code>, roving <code>tabindex</code>, focusable
+        panels. Without JS, all five day panels render stacked under their date headings — the
+        tab rail simply hides itself.</li>
+      <li><strong>Red is budgeted like ink.</strong> #e63329 on #0a0a0a measures 4.58:1 — AA for
+        every size we use it at. It appears only on dates, prices, CTAs, premiere tags and the
+        SOLD OUT stamp. Nothing decorative gets it.</li>
+      <li><strong>SOLD OUT keeps the row.</strong> Like Eventbrite, unavailable things stay
+        listed — dimmed, stamped, honest. The Patron tier’s dead button says
+        <em>why</em>: “Allocation exhausted”.</li>
+      <li><strong>Hover inverts the whole film row</strong> — background to bone, type to black,
+        like a poster flashbulb. It’s gated behind <code>@media (hover:hover)</code> so touch
+        devices never get sticky inversions.</li>
+      <li><strong>Grid-breaks are deliberate:</strong> the retrospective card overlaps the jury
+        column by 64px, stamps hang off card corners, and the giant outlined FERRETTI drifts
+        behind the section on scroll (scrubbed, and skipped under reduced motion).</li>
+      <li><strong>Skip link, focus-visible outlines everywhere, mono fine print at AA
+        contrast,</strong> and a fictional-festival disclaimer in the footer.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="sec-n">05 / 05</span>
+    <h2>Ship it on GitHub Pages</h2>
+    <p>Static site, relative paths, no build. The whole deploy is four commands:</p>
+<pre><code>git init -b main &amp;&amp; git add -A &amp;&amp; git commit -m "Undertow Film Festival"
+gh repo create bswxyz/undertow-festival --public --source . --push
+gh api --method POST /repos/bswxyz/undertow-festival/pages \
+  -f 'source[branch]=main' -f 'source[path]=/'
+gh repo edit bswxyz/undertow-festival \
+  --homepage "https://bswxyz.github.io/undertow-festival/"</code></pre>
+    <p>The <code>.nojekyll</code> file tells Pages to serve files as-is. Because every URL in
+      the site is relative (<code>./styles.css</code>, <code>./guide/</code>), it works
+      identically at <code>localhost</code> and under the <code>/undertow-festival/</code>
+      project path.</p>
+  </section>
+</main>
+
+<footer>
+  <span>© 2026 Undertow Film Festival — a design-showcase concept, not a real festival.</span>
+  <span>Designed &amp; built by Fable · <a href="../">Back to the site →</a></span>
+</footer>
+</body>
+</html>
