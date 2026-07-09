@@ -6,7 +6,7 @@ midnight screenings, a jury with opinions.
 
 **Live:** https://bswxyz.github.io/undertow-festival/ · **Build guide:** https://bswxyz.github.io/undertow-festival/guide/
 
-Part of a 25-site design showcase by Fable. Every site is a distinct product concept with its
+Part of a 25-site design showcase by Parable. Every site is a distinct product concept with its
 own type system, palette, motion signature, and Mobbin-researched interaction patterns.
 
 ---
@@ -97,4 +97,4 @@ accessibility information, a privacy policy, and analytics that respect consent.
 
 ---
 
-MIT © 2026 Fable · Designed & built by Fable — [how this was built →](https://bswxyz.github.io/undertow-festival/guide/)
+MIT © 2026 Parable · Designed & built by Parable — [how this was built →](https://bswxyz.github.io/undertow-festival/guide/)
